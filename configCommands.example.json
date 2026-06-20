@@ -1,0 +1,9 @@
+{
+  "geminiApiKey": "YOUR_GEMINI_API_KEY_1",
+  "geminiApiKey2": "YOUR_GEMINI_API_KEY_2",
+  "mimoApiKey": "YOUR_MIMO_API_KEY",
+  "deepseekApiKey": "YOUR_DEEPSEEK_API_KEY",
+  "opencodeZenKey": "YOUR_OPENCODE_ZEN_KEY",
+  "puter_token": "YOUR_PUTER_JWT_TOKEN",
+  "pageId": "YOUR_PAGE_ID"
+}

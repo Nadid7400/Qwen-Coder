@@ -1,0 +1,45 @@
+{
+  "facebookAccount": {
+    "email": "",
+    "password": "",
+    "2FASecret": "",
+    "i_user": "",
+    "friendRequestOnStart": "",
+    "proxy": null,
+    "userAgent": "Mozilla/5.0 (Linux; Android 12; M2102J20SG) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.0.0 Mobile Safari/537.36",
+    "intervalGetNewCookie": 1440,
+    "notes": "Cookies-only login. Put Facebook cookies in account.txt"
+  },
+  "antiInbox": false,
+  "language": "en",
+  "nickNameBot": "\ud83d\udfe2ZENIX",
+  "prefix": "-",
+  "adminBot": [],
+  "owner": [],
+  "timeZone": "Asia/Dhaka",
+  "autoRefreshFbstate": true,
+  "optionsFca": {
+    "forceLogin": true,
+    "listenEvents": true,
+    "updatePresence": true,
+    "listenTyping": true,
+    "logLevel": "error",
+    "selfListen": true,
+    "selfListenEvent": true,
+    "autoMarkDelivery": false,
+    "autoReconnect": true
+  },
+  "restartListenMqtt": {
+    "enable": true,
+    "timeRestart": 300000,
+    "delayAfterStopListening": 2000,
+    "logNoti": true
+  },
+  "autoLoadScripts": {
+    "enable": true
+  },
+  "groupSettings": {
+    "maxGroups": 10,
+    "knownGroups": []
+  }
+}
