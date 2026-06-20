@@ -7,6 +7,7 @@ Timezone: Asia/Dhaka
 
 import asyncio
 import importlib
+import importlib.util
 import os
 import sys
 import traceback
@@ -91,7 +92,10 @@ async def handle_message(event):
         return
 
     # Check for "zenix" trigger (AI chat)
-    if "zenix" in body.lower() or body.lower().startswith(prefix + "zenix"):
+    # Only trigger if message starts with "-zenix" OR contains "zenix" but is NOT a different command
+    is_zenix_cmd = body.lower().startswith(prefix + "zenix")
+    is_zenix_keyword = "zenix" in body.lower() and not body.startswith(prefix)
+    if is_zenix_cmd or is_zenix_keyword:
         if "zenix" in loaded_commands:
             module = loaded_commands["zenix"]
             if hasattr(module, "handle"):
@@ -142,6 +146,14 @@ async def handle_message(event):
             if hasattr(module, "handle_tord"):
                 await module.handle_tord(event, bot_api, msg_helper, config)
     else:
+        # Check autodl first (URL detection in messages)
+        if "autodl" in loaded_commands:
+            module = loaded_commands["autodl"]
+            if hasattr(module, "check_auto_dl"):
+                handled = await module.check_auto_dl(event, bot_api, msg_helper, config)
+                if handled:
+                    return
+
         # Check if user replied to bot's message (reply-based chat)
         if "zenix" in loaded_commands:
             module = loaded_commands["zenix"]

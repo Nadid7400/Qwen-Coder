@@ -71,9 +71,14 @@ async def check_auto_dl(event, api, msg, config):
     if not urls:
         return False
 
-    # Import dl module for download
+    # Import dl module for download - use importlib since modules are loaded dynamically
     try:
-        from scripts.cmds.dl import download_video
+        import importlib.util
+        dl_path = Path(__file__).parent / "dl.py"
+        spec = importlib.util.spec_from_file_location("dl", str(dl_path))
+        dl_mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(dl_mod)
+        download_video = dl_mod.download_video
 
         for url in urls[:3]:  # Max 3 URLs per message
             try:
@@ -93,7 +98,7 @@ async def check_auto_dl(event, api, msg, config):
             except Exception as e:
                 log(f"AutoDL error for {url}: {e}", "error")
 
-    except ImportError:
-        log("Could not import dl module for autodl", "error")
+    except Exception as e:
+        log(f"Could not import dl module for autodl: {e}", "error")
 
     return True
