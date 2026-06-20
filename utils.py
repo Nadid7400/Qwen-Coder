@@ -111,6 +111,20 @@ class MessageHelper:
 
     def __init__(self, api):
         self.api = api
+        self._on_send_callbacks = []  # Callbacks to track sent message IDs
+
+    def on_message_sent(self, callback):
+        """Register a callback for when bot sends a message (for reply tracking)."""
+        self._on_send_callbacks.append(callback)
+
+    def _notify_sent(self, message_id):
+        """Notify callbacks that a message was sent."""
+        if message_id:
+            for cb in self._on_send_callbacks:
+                try:
+                    cb(message_id)
+                except Exception:
+                    pass
 
     async def send_text(self, thread_id, text, message_id=None):
         """Send a text message to a thread."""
@@ -118,7 +132,14 @@ class MessageHelper:
         if message_id:
             msg["messageID"] = message_id
         try:
-            await self.api.send_message(msg, thread_id)
+            result = await self.api.send_message(msg, thread_id)
+            # Track the sent message ID for reply detection
+            sent_id = None
+            if isinstance(result, dict):
+                sent_id = result.get("messageID", "")
+            elif isinstance(result, str):
+                sent_id = result
+            self._notify_sent(sent_id)
         except Exception as e:
             log(f"Error sending message to {thread_id}: {e}", "error")
 
@@ -126,7 +147,13 @@ class MessageHelper:
         """Send a file attachment to a thread."""
         try:
             msg = {"body": text}
-            await self.api.send_message(msg, thread_id, attachment_path=attachment_path)
+            result = await self.api.send_message(msg, thread_id, attachment_path=attachment_path)
+            sent_id = None
+            if isinstance(result, dict):
+                sent_id = result.get("messageID", "")
+            elif isinstance(result, str):
+                sent_id = result
+            self._notify_sent(sent_id)
         except Exception as e:
             log(f"Error sending attachment to {thread_id}: {e}", "error")
 

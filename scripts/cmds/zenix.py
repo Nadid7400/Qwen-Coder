@@ -2,10 +2,10 @@
 ZENIX Bot - AI Chat Module v5.0
 Features:
 - Trigger: message contains "zenix" (case-insensitive)
+- Reply system: Bot responds when user replies to bot's message
 - Language: Banglish + English ONLY (no Hindi/Hinglish)
 - Talks like a real human friend, NOT AI
 - Memory: Permanent until -memclear
-- Auto talk mode: 10 min TTL after saying "zenix"
 - Active user tracking
 - Deduplication: Bot self-filter, prefix skip
 - Truth or Dare via -tord
@@ -29,12 +29,11 @@ sys.path.insert(0, str(BASE_DIR))
 from utils import log, load_json, save_json, load_commands_config
 
 # Constants
-AUTO_TALK_TTL = 600  # 10 minutes
 AI_TIMEOUT = 15  # seconds per provider call
 MEMORY_FILE = "data/ai_memory.json"
 
 # State tracking
-active_sessions = {}  # thread_id -> {user_id, last_time}
+bot_message_ids = set()  # Track bot's own message IDs for reply detection
 last_provider = None  # Cache last working provider
 
 # System prompt for ZENIX personality
@@ -256,6 +255,39 @@ async def call_ai(prompt, user_id=""):
     return response
 
 
+def track_bot_message(message_id):
+    """Track a message ID as sent by the bot."""
+    bot_message_ids.add(message_id)
+    # Keep set size manageable (last 1000 messages)
+    if len(bot_message_ids) > 1000:
+        # Remove oldest entries (convert to list, trim, convert back)
+        excess = len(bot_message_ids) - 1000
+        for _ in range(excess):
+            bot_message_ids.pop()
+
+
+def is_reply_to_bot(event):
+    """Check if a message is a reply to one of the bot's messages."""
+    message_reply = event.get("messageReply", {})
+    if not message_reply:
+        return False
+
+    # Check if the replied-to message's ID is in our tracked bot messages
+    reply_msg_id = message_reply.get("messageID", "")
+    if reply_msg_id in bot_message_ids:
+        return True
+
+    # Also check by senderID of the replied message (bot's own ID)
+    reply_sender = message_reply.get("senderID", "")
+    from utils import load_config
+    config = load_config()
+    bot_user_id = config.get("facebookAccount", {}).get("i_user", "")
+    if bot_user_id and reply_sender == bot_user_id:
+        return True
+
+    return False
+
+
 async def handle(event, api, msg, config):
     """Handle zenix trigger or -zenix commands."""
     body = event.get("body", "").strip()
@@ -268,18 +300,13 @@ async def handle(event, api, msg, config):
         subcmd = body[len(prefix) + 5:].strip().lower()
 
         if subcmd == "status":
-            session_info = active_sessions.get(thread_id)
-            if session_info:
-                remaining = int(AUTO_TALK_TTL - (time.time() - session_info["last_time"]))
-                await msg.send_text(thread_id, f"ZENIX active! Time left: {remaining}s")
-            else:
-                await msg.send_text(thread_id, "ZENIX is sleeping 💤 Say 'zenix' to wake me up!")
+            tracked = len(bot_message_ids)
+            await msg.send_text(thread_id, f"ZENIX active! Reply to my messages to chat. Tracking {tracked} messages.")
             return
 
         elif subcmd == "clear":
-            if thread_id in active_sessions:
-                del active_sessions[thread_id]
-            await msg.send_text(thread_id, "ZENIX session cleared! 👋")
+            bot_message_ids.clear()
+            await msg.send_text(thread_id, "ZENIX message tracking cleared! 👋")
             return
 
         elif subcmd == "memclear":
@@ -294,12 +321,6 @@ async def handle(event, api, msg, config):
         elif subcmd == "lang":
             await msg.send_text(thread_id, "Language: Banglish + English ONLY 🇧🇩")
             return
-
-    # Activate auto-talk session
-    active_sessions[thread_id] = {
-        "user_id": sender_id,
-        "last_time": time.time()
-    }
 
     # Check if first message (greeting)
     user_mem = get_user_memory(sender_id)
@@ -324,8 +345,8 @@ async def handle(event, api, msg, config):
         await msg.send_text(thread_id, "Bro ektu wait koro, brain lag khacche 🧠💤")
 
 
-async def handle_auto_talk(event, api, msg, config):
-    """Handle auto-talk mode (respond without 'zenix' keyword)."""
+async def handle_reply(event, api, msg, config):
+    """Handle reply-to-bot messages. Bot only responds when user replies to its message."""
     thread_id = event.get("threadID", "")
     sender_id = event.get("senderID", "")
     body = event.get("body", "").strip()
@@ -333,23 +354,11 @@ async def handle_auto_talk(event, api, msg, config):
     if not body or body.startswith(config.get("prefix", "-")):
         return
 
-    session = active_sessions.get(thread_id)
-    if not session:
+    # Only respond if this message is a reply to one of the bot's messages
+    if not is_reply_to_bot(event):
         return
 
-    # Check if session expired
-    if time.time() - session["last_time"] > AUTO_TALK_TTL:
-        del active_sessions[thread_id]
-        return
-
-    # Only respond to the user who activated the session
-    if session["user_id"] != sender_id:
-        return
-
-    # Update session time
-    active_sessions[thread_id]["last_time"] = time.time()
-
-    # Get AI response
+    # User replied to bot's message - respond to them
     response = await call_ai(body, sender_id)
     if response:
         await msg.send_text(thread_id, response)
@@ -357,6 +366,8 @@ async def handle_auto_talk(event, api, msg, config):
         # Store facts
         if any(word in body.lower() for word in ["my name", "i am", "ami", "amar nam"]):
             add_memory_fact(sender_id, body)
+    else:
+        await msg.send_text(thread_id, "Bro ektu wait koro, brain lag khacche 🧠💤")
 
 
 async def handle_slum(event, api, msg, args, config):

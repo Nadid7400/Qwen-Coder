@@ -60,21 +60,23 @@ class FcaApi:
         self.event_handlers.append(handler)
 
     async def send_message(self, msg, thread_id, attachment_path=None):
-        """Send a message to a thread."""
+        """Send a message to a thread. Returns message info dict if available."""
         if not self.api:
             log("Cannot send message - not connected", "error")
-            return
+            return None
 
         try:
             if attachment_path:
-                await self.api.sendMessage(
+                result = await self.api.sendMessage(
                     msg, thread_id,
                     attachment=attachment_path
                 )
             else:
-                await self.api.sendMessage(msg, thread_id)
+                result = await self.api.sendMessage(msg, thread_id)
+            return result
         except Exception as e:
             log(f"Send message error: {e}", "error")
+            return None
 
     async def set_message_reaction(self, reaction, message_id):
         """Set a reaction on a message."""

@@ -142,11 +142,11 @@ async def handle_message(event):
             if hasattr(module, "handle_tord"):
                 await module.handle_tord(event, bot_api, msg_helper, config)
     else:
-        # Check if user is in auto-talk mode (zenix active session)
+        # Check if user replied to bot's message (reply-based chat)
         if "zenix" in loaded_commands:
             module = loaded_commands["zenix"]
-            if hasattr(module, "handle_auto_talk"):
-                await module.handle_auto_talk(event, bot_api, msg_helper, config)
+            if hasattr(module, "handle_reply"):
+                await module.handle_reply(event, bot_api, msg_helper, config)
 
 
 async def main():
@@ -195,6 +195,10 @@ async def main():
     if auto_load:
         load_all_commands()
         log(f"Loaded {len(loaded_commands)} commands")
+
+    # Register reply tracking: when bot sends a message, track its ID
+    if "zenix" in loaded_commands and hasattr(loaded_commands["zenix"], "track_bot_message"):
+        msg_helper.on_message_sent(loaded_commands["zenix"].track_bot_message)
 
     # Register event handler
     bot_api.on_message(handle_event)
