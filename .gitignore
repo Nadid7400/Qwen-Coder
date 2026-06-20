@@ -1,0 +1,31 @@
+# Credentials - NEVER commit these
+account.txt
+configCommands.json
+data/facebook_cookies.txt
+data/instagram_cookies.txt
+data/instagram_session.json
+data/ai_memory.json
+data/user_data.json
+data/permissions.json
+
+# Build artifacts
+build/
+dist/
+*.exe
+*.spec.bak
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Virtual environment
+venv/
+.env/
